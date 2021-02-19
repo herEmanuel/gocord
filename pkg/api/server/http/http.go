@@ -29,6 +29,19 @@ func CreateServer(ctx *fiber.Ctx) error {
 	})
 }
 
+func AddImage(ctx *fiber.Ctx) error {
+
+	serverID, _ := uuid.Parse(ctx.Params("serverID"))
+	imagePath := ctx.Locals("imagePath").(string)
+
+	err := gateway.AddImage(imagePath, serverID)
+	if err != nil {
+		return ctx.Status(400).SendString("Could not add the image to the server picture, " + err.Error())
+	}
+
+	return ctx.SendString("Image added successfully")
+}
+
 func GetServer(ctx *fiber.Ctx) error {
 
 	body := new(GetServerJSON)

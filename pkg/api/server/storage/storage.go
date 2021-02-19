@@ -8,6 +8,8 @@ import (
 	"gorm.io/gorm"
 )
 
+//TODO: Debug all of that
+
 func CreateServer(serverVar *models.Server, userID uuid.UUID, name string) error {
 
 	var creator models.User
@@ -43,24 +45,13 @@ func CreateServer(serverVar *models.Server, userID uuid.UUID, name string) error
 	return nil
 }
 
-func AddImage(imagePath string, serverID uuid.UUID, userID uuid.UUID) error {
+func AddImage(imagePath string, serverID uuid.UUID) error {
 
 	var server models.Server
 
-	result := Db.Preload("Admins").
-		First(&server, "id = ?", serverID)
+	result := Db.First(&server, "id = ?", serverID)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return errors.New("This server doesn't exist")
-	}
-
-	isAdmin := false
-	for _, admin := range server.Admins {
-		if admin.ID == userID {
-			isAdmin = true
-		}
-	}
-	if !isAdmin {
-		return errors.New("You don't have permission to perform that task")
 	}
 
 	server.Picture = imagePath
@@ -77,7 +68,7 @@ func AddImage(imagePath string, serverID uuid.UUID, userID uuid.UUID) error {
 
 // 	var server models.Server
 
-// 	result := Db.Model(&models.Server{}).First(&server, "id = ?", serverID)
+// 	result := Db.First(&server, "id = ?", serverID)
 
 // 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 // 		return errors.New("This server doesn't exist")
@@ -104,12 +95,11 @@ func GetServer(serverVar *models.Server, serverID uuid.UUID) error {
 	return nil
 }
 
-//TODO: create a middleware to check whether a person is an admin or not
 func CreateChannel(channelVar *models.Channel, serverID uuid.UUID, name, permission string) error {
 
 	var server models.Server
 
-	result := Db.Model(&models.Server{}).First(&server, "id = ?", serverID)
+	result := Db.First(&server, "id = ?", serverID)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return errors.New("This server doesn't exist")
 	}
@@ -120,10 +110,28 @@ func CreateChannel(channelVar *models.Channel, serverID uuid.UUID, name, permiss
 		Server:     server.ID,
 	}
 
-	result = Db.Model(&models.Channel{}).Create(&newChannel)
+	result = Db.Create(&newChannel)
 	if result.Error != nil {
 		return result.Error
 	}
+
+	*channelVar = newChannel
+
+	return nil
+}
+
+func DeleteChannel(channelID uuid.UUID) error {
+
+	var channel models.Channel
+
+	result := Db.First(&channel, "id = ?", channelID)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return errors.New("This channel doesn't exist")
+	}
+
+	//TODO: check if an user is an admin
+
+	Db.Delete(&channel, "id = ?", channel.ID)
 
 	return nil
 }
@@ -161,7 +169,7 @@ func GetChannelMessages(userID uuid.UUID, channelID uuid.UUID) ([]models.Message
 	return channel.Messages, nil
 }
 
-func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType string) error {
+func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType string) (models.Message, error) {
 
 	var channel models.Channel
 	var creator models.User
@@ -171,7 +179,7 @@ func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType 
 
 	result := Db.First(&channel, "id = ?", channelID)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return errors.New("This channel doesn't exist")
+		return models.Message{}, errors.New("This channel doesn't exist")
 	}
 
 	isInServer := false
@@ -182,7 +190,7 @@ func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType 
 	}
 
 	if !isInServer {
-		return errors.New("You are not in this server")
+		return models.Message{}, errors.New("You are not in this server")
 	}
 
 	//TODO: check if the user has permission to send the message in this channel
@@ -195,6 +203,27 @@ func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType 
 	}
 
 	result = Db.Create(&newMessage)
+	if result.Error != nil {
+		return models.Message{}, result.Error
+	}
+
+	return newMessage, nil
+}
+
+func DeleteMessage(userID uuid.UUID, messageID uuid.UUID) error {
+
+	var message models.Message
+
+	result := Db.First(&message, "id = ?", messageID)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return errors.New("This message doesn't exist")
+	}
+
+	if message.UserID != userID {
+		return errors.New("You did not send this message")
+	}
+
+	result = Db.Delete(&message, "id = ?", message.ID)
 	if result.Error != nil {
 		return result.Error
 	}
