@@ -45,6 +45,23 @@ func CreateServer(serverVar *models.Server, userID uuid.UUID, name string) error
 	return nil
 }
 
+func DeleteServer(serverID uuid.UUID) error {
+
+	var server models.Server
+
+	result := Db.First(&server, "id = ?", serverID)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return errors.New("This server doesn't exist")
+	}
+
+	result = Db.Delete(&server, "id = ?", server.ID)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
 func AddImage(imagePath string, serverID uuid.UUID) error {
 
 	var server models.Server
@@ -83,9 +100,8 @@ func GetServer(serverVar *models.Server, serverID uuid.UUID) error {
 
 	result := Db.Preload("Channels").
 		Preload("Members").
-		Preload("Roles").
+		Preload("Members.Roles", "server = ?", serverID).
 		First(&server, "id = ?", serverID)
-
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return errors.New("This server doesn't exist")
 	}
@@ -224,6 +240,81 @@ func DeleteMessage(userID uuid.UUID, messageID uuid.UUID) error {
 	}
 
 	result = Db.Delete(&message, "id = ?", message.ID)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func CreateRole(roleVar *models.Role, serverID uuid.UUID, priority uint8, name, color string) error {
+
+	var server models.Server
+
+	result := Db.First(&server, "id = ?", serverID)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return errors.New("This server doesn't exist")
+	}
+
+	newRole := models.Role{
+		Name:     name,
+		Color:    color,
+		Priority: priority,
+		Server:   server.ID,
+	}
+
+	result = Db.Create(&newRole)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	*roleVar = newRole
+
+	return nil
+}
+
+func DeleteRole(roleID, serverID uuid.UUID) error {
+
+	var server models.Server
+
+	result := Db.Preload("Roles", "id = ?", roleID).
+		First(&server, "id = ?", serverID)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return errors.New("This server doesn't exist")
+	}
+
+	if len(server.Roles) == 0 {
+		return errors.New("This role doesn't exist")
+	}
+
+	result = Db.Delete(&server.Roles[0], "id = ?", server.Roles[0].ID)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func AddRoleToUser(roleID, userID, serverID uuid.UUID) error {
+
+	var server models.Server
+	var user models.User
+
+	result := Db.Preload("Roles", "id = ?", roleID).
+		First(&server, "id = ?", serverID)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return errors.New("This server doesn't exist")
+	}
+
+	if len(server.Roles) == 0 {
+		return errors.New("This role doesn't exist")
+	}
+
+	Db.First(&user, "id = ?", userID)
+
+	server.Roles[0].Users = append(server.Roles[0].Users, user)
+
+	result = Db.Save(&server)
 	if result.Error != nil {
 		return result.Error
 	}

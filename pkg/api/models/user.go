@@ -11,4 +11,5 @@ type User struct {
 	Password string
 	Avatar   string   `gorm:"default:-"`
 	Servers  []Server `gorm:"many2many:user_servers"`
+	Roles    []Role   `gorm:"many2many:roles_users"`
 }

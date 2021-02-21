@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/herEmanuel/gocord/pkg/api/models"
 	"github.com/herEmanuel/gocord/pkg/api/server"
 	"github.com/herEmanuel/gocord/pkg/api/user"
@@ -28,7 +27,7 @@ func Initialize() {
 	)
 
 	app := fiber.New()
-	app.Use(cors.New())
+	// app.Use(cors.New())
 
 	user.Init(app, db)
 	server.Init(app, db)
