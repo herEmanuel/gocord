@@ -2,6 +2,8 @@ package storage
 
 import (
 	"errors"
+	"math/rand"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/herEmanuel/gocord/pkg/api/models"
@@ -16,9 +18,18 @@ func CreateServer(serverVar *models.Server, userID uuid.UUID, name string) error
 
 	Db.First(&creator, "id = ?", userID)
 
+	//Generate invite code
+	var inviteCode string
+	letters := "abcdefghijklmnopqrstuvwxyz"
+	rand.Seed(time.Now().UnixNano())
+
+	for i := 0; i < 8; i++ {
+		inviteCode += string(letters[rand.Intn(26)])
+	}
+
 	newServer := models.Server{
 		Name:       name,
-		InviteCode: "",
+		InviteCode: inviteCode,
 		Members:    []models.User{creator},
 		Admins:     []models.User{creator},
 	}
@@ -97,10 +108,14 @@ func AddImage(imagePath string, serverID uuid.UUID) error {
 func GetServer(serverVar *models.Server, serverID uuid.UUID) error {
 
 	var server models.Server
-
+	//TODO: check if it works (ordering roles by priority)
 	result := Db.Preload("Channels").
-		Preload("Members").
-		Preload("Members.Roles", "server = ?", serverID).
+		Preload("Members", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "name", "avatar")
+		}).
+		Preload("Members.Roles", "server = ?", serverID, func(db *gorm.DB) *gorm.DB {
+			return db.Order("priority DESC")
+		}).
 		First(&server, "id = ?", serverID)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return errors.New("This server doesn't exist")
@@ -145,20 +160,15 @@ func DeleteChannel(channelID uuid.UUID) error {
 		return errors.New("This channel doesn't exist")
 	}
 
-	//TODO: check if an user is an admin
-
 	Db.Delete(&channel, "id = ?", channel.ID)
 
 	return nil
 }
 
-func GetChannelMessages(userID uuid.UUID, channelID uuid.UUID) ([]models.Message, error) {
+func GetChannelMessages(userID, channelID uuid.UUID) ([]models.Message, error) {
 
 	var channel models.Channel
 	var user models.User
-
-	Db.Preload("Servers").
-		First(&user, "id = ?", userID)
 
 	result := Db.Preload("Messages").
 		Preload("Messages.User", func(db *gorm.DB) *gorm.DB {
@@ -168,6 +178,9 @@ func GetChannelMessages(userID uuid.UUID, channelID uuid.UUID) ([]models.Message
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return []models.Message{}, errors.New("This channel doesn't exist")
 	}
+
+	Db.Preload("Servers").
+		First(&user, "id = ?", userID)
 
 	isInServer := false
 	for _, server := range user.Servers {
@@ -180,7 +193,21 @@ func GetChannelMessages(userID uuid.UUID, channelID uuid.UUID) ([]models.Message
 		return []models.Message{}, errors.New("You are not in this server")
 	}
 
-	//TODO: check whether a user has permission to see the messages of a channel or not
+	if channel.Permission == "admin-only" {
+		var server models.Server
+		Db.Preload("Admins").First(&server, "id = ?", channel.Server)
+
+		isServerAdmin := false
+		for _, serverAdmin := range server.Admins {
+			if serverAdmin.ID == user.ID {
+				isServerAdmin = true
+				break
+			}
+		}
+		if !isServerAdmin {
+			return []models.Message{}, errors.New("You don't have permission to see the messages of this channel")
+		}
+	}
 
 	return channel.Messages, nil
 }
@@ -190,13 +217,13 @@ func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType 
 	var channel models.Channel
 	var creator models.User
 
-	Db.Preload("Servers").
-		First(&creator, "id = ?", creatorID)
-
 	result := Db.First(&channel, "id = ?", channelID)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return models.Message{}, errors.New("This channel doesn't exist")
 	}
+
+	Db.Preload("Servers").
+		First(&creator, "id = ?", creatorID)
 
 	isInServer := false
 	for _, server := range creator.Servers {
@@ -209,7 +236,21 @@ func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType 
 		return models.Message{}, errors.New("You are not in this server")
 	}
 
-	//TODO: check if the user has permission to send the message in this channel
+	if channel.Permission != "public" {
+		var server models.Server
+		Db.Preload("Admins").First(&server, "id = ?", channel.Server)
+
+		isServerAdmin := false
+		for _, serverAdmin := range server.Admins {
+			if serverAdmin.ID == creator.ID {
+				isServerAdmin = true
+				break
+			}
+		}
+		if !isServerAdmin {
+			return models.Message{}, errors.New("You don't have permission to send a message on this channel")
+		}
+	}
 
 	newMessage := models.Message{
 		Content: content,
@@ -315,6 +356,71 @@ func AddRoleToUser(roleID, userID, serverID uuid.UUID) error {
 	server.Roles[0].Users = append(server.Roles[0].Users, user)
 
 	result = Db.Save(&server)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func RemoveUser(userID, serverID uuid.UUID) error {
+
+	var user models.User
+
+	result := Db.Preload("Servers").First(&user, "id = ?", userID)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return errors.New("This user doesn't exist")
+	}
+
+	isInServer := false
+	for i, userServer := range user.Servers {
+		if userServer.ID == serverID {
+			isInServer = true
+			user.Servers[i-1] = user.Servers[len(user.Servers)-1]
+			user.Servers = user.Servers[:len(user.Servers)-1]
+			break
+		}
+	}
+
+	if !isInServer {
+		return errors.New("This user is not in the server")
+	}
+
+	result = Db.Save(&user)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func PromoteToAdmin(userID, serverID uuid.UUID) error {
+
+	var user models.User
+	var server models.Server
+
+	result := Db.Preload("Servers").First(&user, "id = ?", userID)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return errors.New("This user doesn't exist")
+	}
+
+	isInServer := false
+	for _, userServer := range user.Servers {
+		if userServer.ID == serverID {
+			isInServer = true
+			break
+		}
+	}
+
+	if !isInServer {
+		return errors.New("This user is not in the server")
+	}
+
+	Db.First(&server, "id = ?", serverID)
+
+	server.Admins = append(server.Admins, user)
+
+	result = Db.Omit("Admins.*").Save(&server)
 	if result.Error != nil {
 		return result.Error
 	}

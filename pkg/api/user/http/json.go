@@ -11,3 +11,13 @@ type LoginJSON struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
+
+type ChangePasswordJSON struct {
+	OldPassword          string `json:"oldPassword"`
+	NewPassword          string `json:"newPassword"`
+	ConfirmationPassword string `json:"confirmationPassword"`
+}
+
+type EnterServerJSON struct {
+	InviteCode string `json:"inviteCode"`
+}

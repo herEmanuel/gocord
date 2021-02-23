@@ -8,7 +8,7 @@ import (
 type Channel struct {
 	postgres.BaseModel
 	Name       string
-	Server     uuid.UUID
-	Messages   []Message `gorm:"constraint:OnDelete:CASCADE;foreignKey:channel"`
 	Permission string    //read-only, admin-only, public
+	Server     uuid.UUID `json:",omitempty"`
+	Messages   []Message `gorm:"constraint:OnDelete:CASCADE;foreignKey:channel" json:",omitempty"`
 }

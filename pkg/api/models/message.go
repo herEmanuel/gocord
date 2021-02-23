@@ -9,7 +9,7 @@ type Message struct {
 	postgres.BaseModel
 	Content string
 	Type    string
-	User    User
-	UserID  uuid.UUID
-	Channel uuid.UUID
+	User    User      `json:",omitempty"`
+	UserID  uuid.UUID `json:",omitempty"`
+	Channel uuid.UUID `json:",omitempty"`
 }

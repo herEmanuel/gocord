@@ -1,10 +1,13 @@
 package auth
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/herEmanuel/gocord/pkg/api/models"
 	"github.com/herEmanuel/gocord/pkg/api/server/storage"
+	"gorm.io/gorm"
 )
 
 func IsServerAdmin(ctx *fiber.Ctx) error {
@@ -16,8 +19,11 @@ func IsServerAdmin(ctx *fiber.Ctx) error {
 		return ctx.Status(500).SendString("Invalid server id, " + err.Error())
 	}
 
-	storage.Db.Preload("Admins").
+	result := storage.Db.Preload("Admins").
 		First(&server, "id = ?", serverID)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return ctx.Status(400).SendString("This server doesn't exist")
+	}
 
 	isAdmin := false
 	for _, admin := range server.Admins {

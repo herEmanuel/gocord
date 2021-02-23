@@ -10,6 +10,6 @@ type Role struct {
 	Name     string
 	Color    string
 	Priority uint8
-	Server   uuid.UUID
-	Users    []User `gorm:"many2many:roles_users"`
+	Server   uuid.UUID `json:",omitempty"`
+	Users    []User    `gorm:"many2many:roles_users" json:",omitempty"`
 }
