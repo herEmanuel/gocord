@@ -24,7 +24,7 @@ func Init(app *fiber.App, dbConn *gorm.DB) {
 
 	v1 := app.Group("/v1")
 
-	v1.Get("/getServer", auth.AuthMiddleware, http.GetServer)
+	v1.Get("/getServer/:serverID", auth.AuthMiddleware, http.GetServer)
 	v1.Post("/createServer", auth.AuthMiddleware, http.CreateServer)
 	v1.Post("/addImage/:serverID", auth.AuthMiddleware, auth.IsServerAdmin, imageUpload.ImageUpload, http.CreateServer)
 	v1.Post("/sendMessage/:channelID", auth.AuthMiddleware, http.SendMessage)

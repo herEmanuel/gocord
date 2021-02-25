@@ -81,6 +81,18 @@ func AddImage(ctx *fiber.Ctx) error {
 	return ctx.SendString("Avatar updated successfully")
 }
 
+func GetUserInfo(ctx *fiber.Ctx) error {
+
+	userID := ctx.Locals("userID").(uuid.UUID)
+
+	user, err := gateway.GetUserInfo(userID)
+	if err != nil {
+		return ctx.Status(400).SendString("Could not get this user info, " + err.Error())
+	}
+
+	return ctx.JSON(user)
+}
+
 func EnterServer(ctx *fiber.Ctx) error {
 
 	body := new(EnterServerJSON)

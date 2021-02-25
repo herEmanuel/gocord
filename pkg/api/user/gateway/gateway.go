@@ -72,6 +72,18 @@ func AddImage(imagePath string, userID uuid.UUID) error {
 	return nil
 }
 
+func GetUserInfo(userID uuid.UUID) (models.User, error) {
+
+	var user models.User
+
+	err := storage.GetUserInfo(&user, userID)
+	if err != nil {
+		return models.User{}, err
+	}
+
+	return user, nil
+}
+
 func EnterServer(userID uuid.UUID, inviteCode string) (models.Server, error) {
 
 	var server models.Server

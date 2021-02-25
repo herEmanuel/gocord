@@ -105,6 +105,22 @@ func AddImage(imagePath string, userID uuid.UUID) error {
 	return nil
 }
 
+func GetUserInfo(userVar *models.User, userID uuid.UUID) error {
+
+	var user models.User
+
+	result := Db.Preload("Servers").
+		Select("id", "created_at", "name", "avatar").
+		First(&user, "id = ?", userID)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return errors.New("This user doesn't exist")
+	}
+
+	*userVar = user
+
+	return nil
+}
+
 func EnterServer(serverVar *models.Server, userID uuid.UUID, inviteCode string) error {
 
 	var user models.User

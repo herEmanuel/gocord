@@ -19,6 +19,16 @@ func CreateServer(userID uuid.UUID, name string) (models.Server, error) {
 	return newServer, nil
 }
 
+func DeleteServer(serverID uuid.UUID) error {
+
+	err := storage.DeleteServer(serverID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func AddImage(imagePath string, serverID uuid.UUID) error {
 
 	err := storage.AddImage(imagePath, serverID)
@@ -89,6 +99,58 @@ func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType 
 func DeleteMessage(userID uuid.UUID, messageID uuid.UUID) error {
 
 	err := storage.DeleteMessage(userID, messageID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func CreateRole(serverID uuid.UUID, priority uint8, name, color string) (models.Role, error) {
+
+	var role models.Role
+
+	err := storage.CreateRole(&role, serverID, priority, name, color)
+	if err != nil {
+		return models.Role{}, err
+	}
+
+	return role, nil
+}
+
+func DeleteRole(roleID, serverID uuid.UUID) error {
+
+	err := storage.DeleteRole(roleID, serverID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func AddRoleToUser(roleID, userID, serverID uuid.UUID) error {
+
+	err := storage.AddRoleToUser(roleID, userID, serverID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func RemoveUser(userID, serverID uuid.UUID) error {
+
+	err := storage.RemoveUser(userID, serverID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func PromoteToAdmin(userID, serverID uuid.UUID) error {
+
+	err := storage.PromoteToAdmin(userID, serverID)
 	if err != nil {
 		return err
 	}
