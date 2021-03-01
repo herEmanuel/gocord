@@ -24,9 +24,9 @@ type CreateRoleJSON struct {
 
 //TODO: check if it can convert string to uuid
 type AddRoleToUserJSON struct {
-	RoleID   uuid.UUID `json:"roleID"`
-	UserID   uuid.UUID `json:"userID"`
-	ServerID uuid.UUID `json:"serverID"`
+	RoleID   string `json:"roleID"`
+	UserID   string `json:"userID"`
+	ServerID string `json:"serverID"`
 }
 
 type RemoveUserJSON struct {

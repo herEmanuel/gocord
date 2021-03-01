@@ -22,7 +22,7 @@ func CreateServer(ctx *fiber.Ctx) error {
 		return ctx.Status(400).SendString("Could not create the new server, " + err.Error())
 	}
 
-	return ctx.JSON(map[string]interface{}{
+	return ctx.JSON(fiber.Map{
 		"ID":         newServer.ID,
 		"Name":       newServer.Name,
 		"InviteCode": newServer.InviteCode,
@@ -123,12 +123,18 @@ func SendMessage(ctx *fiber.Ctx) error {
 	channelID, _ := uuid.Parse(ctx.Params("channelID"))
 	userID := ctx.Locals("userID").(uuid.UUID)
 
-	err = gateway.SendMessage(userID, channelID, body.Content, body.MessageType)
+	newMessage, err := gateway.SendMessage(userID, channelID, body.Content, body.MessageType)
 	if err != nil {
 		return ctx.Status(400).SendString("Could not send the message, " + err.Error())
 	}
 
-	return ctx.SendString("Your message was sent successfully")
+	return ctx.JSON(fiber.Map{
+		"ID":        newMessage.ID,
+		"CreatedAt": newMessage.CreatedAt,
+		"Content":   newMessage.Content,
+		"Type":      newMessage.Type,
+		"ChannelID": newMessage.Channel,
+	})
 }
 
 func DeleteMessage(ctx *fiber.Ctx) error {
@@ -185,7 +191,11 @@ func AddRoleToUser(ctx *fiber.Ctx) error {
 		return ctx.Status(500).SendString("Could not parse the request body")
 	}
 
-	err = gateway.AddRoleToUser(body.RoleID, body.UserID, body.ServerID)
+	roleID, _ := uuid.Parse(body.RoleID)
+	userID, _ := uuid.Parse(body.UserID)
+	serverID, _ := uuid.Parse(body.ServerID)
+
+	err = gateway.AddRoleToUser(roleID, userID, serverID)
 	if err != nil {
 		return ctx.Status(400).SendString("Could not add the role to this user, " + err.Error())
 	}

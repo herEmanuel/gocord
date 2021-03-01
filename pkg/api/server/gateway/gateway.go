@@ -77,23 +77,23 @@ func GetChannelMessages(userID uuid.UUID, channelID uuid.UUID) ([]models.Message
 
 	messagesVar, err := storage.GetChannelMessages(userID, channelID)
 	if err != nil {
-		return []models.Message{}, nil
+		return []models.Message{}, err
 	}
 
 	return messagesVar, nil
 }
 
-func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType string) error {
+func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType string) (models.Message, error) {
 
 	message, err := storage.SendMessage(creatorID, channelID, content, messageType)
 	if err != nil {
-		return err
+		return models.Message{}, err
 	}
 
 	//trigger an event to broadcast the message via websockets
 	go chat.TriggerSendMessage(channelID, message.ID, message.User.ID, message.User.Name, message.User.Avatar, content, messageType)
 
-	return nil
+	return message, nil
 }
 
 func DeleteMessage(userID uuid.UUID, messageID uuid.UUID) error {

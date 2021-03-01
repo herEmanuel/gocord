@@ -65,7 +65,7 @@ func DeleteServer(serverID uuid.UUID) error {
 		return errors.New("This server doesn't exist")
 	}
 
-	result = Db.Delete(&server, "id = ?", server.ID)
+	result = Db.Select("Members", "Admins").Delete(&server, "id = ?", server.ID)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -255,7 +255,7 @@ func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType 
 	newMessage := models.Message{
 		Content: content,
 		Type:    messageType,
-		User:    creator,
+		UserID:  creator.ID,
 		Channel: channel.ID,
 	}
 
@@ -328,7 +328,7 @@ func DeleteRole(roleID, serverID uuid.UUID) error {
 		return errors.New("This role doesn't exist")
 	}
 
-	result = Db.Delete(&server.Roles[0], "id = ?", server.Roles[0].ID)
+	result = Db.Select("Users").Delete(&server.Roles[0], "id = ?", server.Roles[0].ID)
 	if result.Error != nil {
 		return result.Error
 	}

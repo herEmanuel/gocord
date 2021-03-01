@@ -18,6 +18,7 @@ func Init(app *fiber.App, dbConn *gorm.DB) {
 	v1.Post("/login", http.Login)
 	v1.Put("/changePassword", auth.AuthMiddleware, http.ChangePassword)
 	v1.Put("/changeAvatar", auth.AuthMiddleware, imageUpload.ImageUpload, http.AddImage)
+	v1.Get("/getUserInfo", auth.AuthMiddleware, http.GetUserInfo)
 	v1.Put("/enterServer", auth.AuthMiddleware, http.EnterServer)
 	v1.Put("/leaveServer/:serverID", auth.AuthMiddleware, http.LeaveServer)
 

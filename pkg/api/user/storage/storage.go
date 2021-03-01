@@ -166,15 +166,12 @@ func LeaveServer(userID, serverID uuid.UUID) error {
 		return errors.New("This server doesn't exist")
 	}
 
-	Db.First(&user, "id = ?", userID)
+	Db.Preload("Servers").First(&user, "id = ?", userID)
 
 	isInServer := false
-	for i, userServer := range user.Servers {
+	for _, userServer := range user.Servers {
 		if userServer.ID == server.ID {
 			isInServer = true
-			//TODO: check to see if it works
-			user.Servers[i-1] = user.Servers[len(user.Servers)-1]
-			user.Servers = user.Servers[:len(user.Servers)-1]
 			break
 		}
 	}
@@ -182,9 +179,9 @@ func LeaveServer(userID, serverID uuid.UUID) error {
 		return errors.New("You are not in this server")
 	}
 
-	result = Db.Save(&user)
-	if result.Error != nil {
-		return result.Error
+	err := Db.Model(&user).Association("Servers").Delete(&server)
+	if err != nil {
+		return err
 	}
 
 	return nil
