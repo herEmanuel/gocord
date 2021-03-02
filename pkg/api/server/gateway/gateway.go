@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"errors"
+
 	"github.com/google/uuid"
 	"github.com/herEmanuel/gocord/pkg/api/models"
 	"github.com/herEmanuel/gocord/pkg/api/server/chat"
@@ -138,7 +140,11 @@ func AddRoleToUser(roleID, userID, serverID uuid.UUID) error {
 	return nil
 }
 
-func RemoveUser(userID, serverID uuid.UUID) error {
+func RemoveUser(userID, adminID, serverID uuid.UUID) error {
+
+	if userID == adminID {
+		return errors.New("You can not remove yourself from the server")
+	}
 
 	err := storage.RemoveUser(userID, serverID)
 	if err != nil {

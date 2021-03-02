@@ -193,7 +193,7 @@ func AddRoleToUser(ctx *fiber.Ctx) error {
 
 	roleID, _ := uuid.Parse(body.RoleID)
 	userID, _ := uuid.Parse(body.UserID)
-	serverID, _ := uuid.Parse(body.ServerID)
+	serverID, _ := uuid.Parse(ctx.Params("serverID"))
 
 	err = gateway.AddRoleToUser(roleID, userID, serverID)
 	if err != nil {
@@ -212,7 +212,10 @@ func RemoveUser(ctx *fiber.Ctx) error {
 		return ctx.Status(500).SendString("Could not parse the request body")
 	}
 
-	err = gateway.RemoveUser(body.UserID, body.ServerID)
+	serverID, _ := uuid.Parse(ctx.Params("serverID"))
+	adminID := ctx.Locals("userID").(uuid.UUID)
+
+	err = gateway.RemoveUser(body.UserID, adminID, serverID)
 	if err != nil {
 		return ctx.Status(400).SendString("Could not remove this user from this server, " + err.Error())
 	}
@@ -229,7 +232,9 @@ func PromoteToAdmin(ctx *fiber.Ctx) error {
 		return ctx.Status(500).SendString("Could not parse the request body")
 	}
 
-	err = gateway.PromoteToAdmin(body.UserID, body.ServerID)
+	serverID, _ := uuid.Parse(ctx.Params("serverID"))
+
+	err = gateway.PromoteToAdmin(body.UserID, serverID)
 	if err != nil {
 		return ctx.Status(400).SendString("Could not promote this user to admin, " + err.Error())
 	}

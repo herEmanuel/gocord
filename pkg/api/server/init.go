@@ -35,7 +35,7 @@ func Init(app *fiber.App, dbConn *gorm.DB) {
 	v1.Delete("/deleteMessage/:messageID", auth.AuthMiddleware, http.DeleteMessage)
 	v1.Post("/createRole/:serverID", auth.AuthMiddleware, auth.IsServerAdmin, http.CreateRole)
 	v1.Delete("/deleteRole/:serverID/:roleID", auth.AuthMiddleware, auth.IsServerAdmin, http.DeleteRole)
-	v1.Put("/addRoleToUser", auth.AuthMiddleware, auth.IsServerAdmin, http.AddRoleToUser)
-	v1.Delete("/removeUser", auth.AuthMiddleware, auth.IsServerAdmin, http.RemoveUser)
-	v1.Put("/promoteToAdmin", auth.AuthMiddleware, auth.IsServerAdmin, http.PromoteToAdmin)
+	v1.Put("/addRoleToUser/:serverID", auth.AuthMiddleware, auth.IsServerAdmin, http.AddRoleToUser)
+	v1.Delete("/removeUser/:serverID", auth.AuthMiddleware, auth.IsServerAdmin, http.RemoveUser)
+	v1.Put("/promoteToAdmin/:serverID", auth.AuthMiddleware, auth.IsServerAdmin, http.PromoteToAdmin)
 }

@@ -114,7 +114,7 @@ func GetServer(serverVar *models.Server, serverID uuid.UUID) error {
 			return db.Select("id", "name", "avatar")
 		}).
 		Preload("Members.Roles", "server = ?", serverID, func(db *gorm.DB) *gorm.DB {
-			return db.Order("priority DESC")
+			return db.Select("id", "name", "color", "priority").Order("priority DESC")
 		}).
 		First(&server, "id = ?", serverID)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -355,7 +355,7 @@ func AddRoleToUser(roleID, userID, serverID uuid.UUID) error {
 
 	server.Roles[0].Users = append(server.Roles[0].Users, user)
 
-	result = Db.Save(&server)
+	result = Db.Omit("Users.*").Save(&server.Roles[0])
 	if result.Error != nil {
 		return result.Error
 	}
@@ -366,18 +366,17 @@ func AddRoleToUser(roleID, userID, serverID uuid.UUID) error {
 func RemoveUser(userID, serverID uuid.UUID) error {
 
 	var user models.User
+	var server models.Server
 
-	result := Db.Preload("Servers").First(&user, "id = ?", userID)
+	result := Db.Preload("Servers").Preload("Roles").First(&user, "id = ?", userID)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return errors.New("This user doesn't exist")
 	}
 
 	isInServer := false
-	for i, userServer := range user.Servers {
+	for _, userServer := range user.Servers {
 		if userServer.ID == serverID {
 			isInServer = true
-			user.Servers[i-1] = user.Servers[len(user.Servers)-1]
-			user.Servers = user.Servers[:len(user.Servers)-1]
 			break
 		}
 	}
@@ -386,9 +385,28 @@ func RemoveUser(userID, serverID uuid.UUID) error {
 		return errors.New("This user is not in the server")
 	}
 
-	result = Db.Save(&user)
-	if result.Error != nil {
-		return result.Error
+	Db.First(&server, "id = ?", serverID)
+
+	err := Db.Transaction(func(ts *gorm.DB) error {
+
+		err := ts.Model(&server).Association("Members").Delete(&user)
+		if err != nil {
+			return err
+		}
+
+		for _, role := range user.Roles {
+			if role.Server == server.ID {
+				err = ts.Model(&user).Association("Roles").Delete(&role)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return nil

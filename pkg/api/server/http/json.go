@@ -24,17 +24,14 @@ type CreateRoleJSON struct {
 
 //TODO: check if it can convert string to uuid
 type AddRoleToUserJSON struct {
-	RoleID   string `json:"roleID"`
-	UserID   string `json:"userID"`
-	ServerID string `json:"serverID"`
+	RoleID string `json:"roleID"`
+	UserID string `json:"userID"`
 }
 
 type RemoveUserJSON struct {
-	UserID   uuid.UUID `json:"userID"`
-	ServerID uuid.UUID `json:"serverID"`
+	UserID uuid.UUID `json:"userID"`
 }
 
 type PromoteToAdminJSON struct {
-	UserID   uuid.UUID `json:"userID"`
-	ServerID uuid.UUID `json:"serverID"`
+	UserID uuid.UUID `json:"userID"`
 }
