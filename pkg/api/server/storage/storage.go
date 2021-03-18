@@ -109,13 +109,17 @@ func GetServer(serverVar *models.Server, serverID uuid.UUID) error {
 
 	var server models.Server
 	//TODO: check if it works (ordering roles by priority)
-	result := Db.Preload("Channels").
-		Preload("Members", func(db *gorm.DB) *gorm.DB {
+	result := Db.
+		Preload("Channels", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "name", "permission", "server")
+		}).
+		Preload("Roles", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "name", "color", "priority", "server").Order("priority DESC")
+		}).
+		Preload("Roles.Users", func(db *gorm.DB) *gorm.DB {
 			return db.Select("id", "name", "avatar")
 		}).
-		Preload("Members.Roles", "server = ?", serverID, func(db *gorm.DB) *gorm.DB {
-			return db.Select("id", "name", "color", "priority").Order("priority DESC")
-		}).
+		Select("id", "name", "picture", "invite_code").
 		First(&server, "id = ?", serverID)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return errors.New("This server doesn't exist")
