@@ -87,6 +87,7 @@ func GetUserInfo(ctx *fiber.Ctx) error {
 
 	user, err := gateway.GetUserInfo(userID)
 	if err != nil {
+		ctx.ClearCookie("authToken")
 		return ctx.Status(400).SendString("Could not get this user info, " + err.Error())
 	}
 

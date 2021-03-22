@@ -92,10 +92,12 @@ func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType 
 		return models.Message{}, err
 	}
 
-	//trigger an event to broadcast the message via websockets
-	go chat.TriggerSendMessage(channelID, message.ID, message.User.ID, message.User.Name, message.User.Avatar, content, messageType)
+	newMessage := message["newMessage"].(models.Message)
 
-	return message, nil
+	//trigger an event to broadcast the message via websockets
+	go chat.TriggerSendMessage(channelID, newMessage.ID, newMessage.UserID, message["userName"].(string), message["userAvatar"].(string), content, messageType)
+
+	return newMessage, nil
 }
 
 func DeleteMessage(userID uuid.UUID, messageID uuid.UUID) error {

@@ -1,8 +1,9 @@
 package chat
 
+import "github.com/google/uuid"
+
 type ConnectionMessage struct {
-	ChannelID string `json:"channelId"`
-	UserID    string `json:"userId"`
+	ChannelID uuid.UUID `json:"channelId"`
 }
 
 type NormalMessage struct {

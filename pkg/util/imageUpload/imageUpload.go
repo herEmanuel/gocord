@@ -12,11 +12,15 @@ import (
 func ImageUpload(ctx *fiber.Ctx) error {
 
 	fileForm, err := ctx.MultipartForm()
+	fmt.Println(fileForm)
 	if err != nil {
 		return ctx.Status(500).SendString("Could not parse the multipart form")
 	}
 
 	images := fileForm.File["images"]
+	if len(images) == 0 {
+		return ctx.Status(400).SendString("No images provided")
+	}
 
 	for _, image := range images {
 

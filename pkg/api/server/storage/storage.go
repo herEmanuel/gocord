@@ -56,16 +56,21 @@ func CreateServer(serverVar *models.Server, userID uuid.UUID, name string) error
 	return nil
 }
 
-func DeleteServer(serverID uuid.UUID) error {
+func DeleteServer(serverID uuid.UUID, ts ...*gorm.DB) error {
+
+	db := Db
+	if len(ts) > 0 {
+		db = ts[0]
+	}
 
 	var server models.Server
 
-	result := Db.First(&server, "id = ?", serverID)
+	result := db.First(&server, "id = ?", serverID)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return errors.New("This server doesn't exist")
 	}
 
-	result = Db.Select("Members", "Admins").Delete(&server, "id = ?", server.ID)
+	result = db.Select("Members", "Admins").Delete(&server, "id = ?", server.ID)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -216,14 +221,14 @@ func GetChannelMessages(userID, channelID uuid.UUID) ([]models.Message, error) {
 	return channel.Messages, nil
 }
 
-func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType string) (models.Message, error) {
+func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType string) (map[string]interface{}, error) {
 
 	var channel models.Channel
 	var creator models.User
 
 	result := Db.First(&channel, "id = ?", channelID)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return models.Message{}, errors.New("This channel doesn't exist")
+		return nil, errors.New("This channel doesn't exist")
 	}
 
 	Db.Preload("Servers").
@@ -237,7 +242,7 @@ func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType 
 	}
 
 	if !isInServer {
-		return models.Message{}, errors.New("You are not in this server")
+		return nil, errors.New("You are not in this server")
 	}
 
 	if channel.Permission != "public" {
@@ -252,7 +257,7 @@ func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType 
 			}
 		}
 		if !isServerAdmin {
-			return models.Message{}, errors.New("You don't have permission to send a message on this channel")
+			return nil, errors.New("You don't have permission to send a message on this channel")
 		}
 	}
 
@@ -265,10 +270,14 @@ func SendMessage(creatorID uuid.UUID, channelID uuid.UUID, content, messageType 
 
 	result = Db.Create(&newMessage)
 	if result.Error != nil {
-		return models.Message{}, result.Error
+		return nil, result.Error
 	}
 
-	return newMessage, nil
+	return map[string]interface{}{
+		"newMessage": newMessage,
+		"userName":   creator.Name,
+		"userAvatar": creator.Avatar,
+	}, nil
 }
 
 func DeleteMessage(userID uuid.UUID, messageID uuid.UUID) error {

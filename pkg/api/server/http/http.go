@@ -45,7 +45,10 @@ func DeleteServer(ctx *fiber.Ctx) error {
 func AddImage(ctx *fiber.Ctx) error {
 
 	serverID, _ := uuid.Parse(ctx.Params("serverID"))
-	imagePath := ctx.Locals("imagePath").(string)
+	imagePath, ok := ctx.Locals("imagePath").(string)
+	if !ok {
+		return ctx.Status(400).SendString("No image path provided")
+	}
 
 	err := gateway.AddImage(imagePath, serverID)
 	if err != nil {

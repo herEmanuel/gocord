@@ -161,7 +161,7 @@ func LeaveServer(userID, serverID uuid.UUID) error {
 	var user models.User
 	var server models.Server
 
-	result := Db.First(&server, "id = ?", serverID)
+	result := Db.Preload("Members").First(&server, "id = ?", serverID)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return errors.New("This server doesn't exist")
 	}
@@ -177,6 +177,28 @@ func LeaveServer(userID, serverID uuid.UUID) error {
 	}
 	if !isInServer {
 		return errors.New("You are not in this server")
+	}
+
+	if len(server.Members) == 1 {
+		err := Db.Transaction(func(ts *gorm.DB) error {
+
+			err := Db.Model(&user).Association("Servers").Delete(&server)
+			if err != nil {
+				return err
+			}
+
+			err = serverStorage.DeleteServer(server.ID, ts)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	err := Db.Model(&user).Association("Servers").Delete(&server)

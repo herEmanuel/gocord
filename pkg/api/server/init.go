@@ -14,13 +14,14 @@ import (
 func Init(app *fiber.App, dbConn *gorm.DB) {
 
 	storage.Db = dbConn
+
 	chat.Init()
 	app.Get("/ws", func(ctx *fiber.Ctx) error {
 		if !websocket.IsWebSocketUpgrade(ctx) {
 			return fiber.ErrUpgradeRequired
 		}
 		return ctx.Next()
-	}, websocket.New(chat.WSConn))
+	}, auth.AuthMiddleware, websocket.New(chat.WSConn))
 
 	v1 := app.Group("/v1")
 
